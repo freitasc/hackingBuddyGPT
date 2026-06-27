@@ -89,12 +89,25 @@ class OpenAIConnection(LLM):
     def encode(self, query) -> list[int]:
         # I know this is crappy for all non-openAI models but sadly this
         # has to be good enough for now
-        if self.model.startswith("gpt-") and not self.model.startswith("gpt-4o"):
+        if self.model.startswith("gpt-5."):
+            encoding = tiktoken.get_encoding("o200k_base")
+        elif self.model.startswith("gpt-") and not self.model.startswith("gpt-4o") and not self.model.startswith("gpt-5.2-mini"):
             encoding = tiktoken.encoding_for_model(self.model)
         else:
             encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
         return encoding.encode(query)
 
+@configurable("openai/gpt-5.5", "OpenAI GPT-5.5")
+@dataclass
+class GPT55(OpenAIConnection):
+    model: str = "gpt-5.5"
+    context_size: int = 400000
+
+@configurable("openai/gpt-5.2-mini", "OpenAI GPT-5.2-mini (preview)")
+@dataclass
+class GPT52Mini(OpenAIConnection):
+    model: str = "gpt-5.2-mini-preview"
+    context_size: int = 400000
 
 @configurable("openai/gpt-3.5-turbo", "OpenAI GPT-3.5 Turbo")
 @dataclass

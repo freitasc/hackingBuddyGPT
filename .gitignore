@@ -21,7 +21,7 @@ scripts/codespaces_ansible_hosts.ini
 scripts/codespaces_ansible_id_rsa
 scripts/codespaces_ansible_id_rsa.pub
 scripts/mac_ansible.cfg
-scripts/mac_ansible_hosts.ini
+scripts/mac_ansible_hosts.inipip install -e .
 scripts/mac_ansible_id_rsa
 scripts/mac_ansible_id_rsa.pub
 .aider*
@@ -32,3 +32,5 @@ src/hackingBuddyGPT/usecases/web_api_testing/retrieve_spotify_token.py
 config/my_configs/*
 config/configs/*
 config/configs/
+
+*.history
