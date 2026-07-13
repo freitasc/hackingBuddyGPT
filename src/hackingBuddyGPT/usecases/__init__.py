@@ -5,3 +5,4 @@ from .viewer import *
 from .minimal_linux_privesc import *
 from .call_usecase_from_usecase import *
 from .linux_privesc import *
+from .linpeas import *
