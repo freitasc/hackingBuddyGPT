@@ -43,10 +43,7 @@ class ExPrivEscLinuxLSEUseCase(UseCase):
     def get_name(self) -> str:
         return self.__class__.__name__
 
-    def run(self, configuration):
-        self.configuration = configuration
-        
-        self.log.start_run(self.get_name(), self.serialize_configuration(configuration))
+    def run(self):
         # get the hints through running LSE on the target system
         hints = self.call_lse_against_host()
         turns_per_hint = int(self.max_turns / len(hints))
